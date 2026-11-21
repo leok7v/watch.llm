@@ -1,0 +1,25 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Cache the models
+        uses: actions/cache@v6
+        with:
+          path: models
+          key: models-v1
+      - name: Download the models
+        run: ./models.sh
+      - name: Build, then run the app in a watch simulator
+        run: ./check.sh
+      - name: Show the logs after a failure
+        if: failure()
+        run: tail -60 tmp/check/build.log tmp/check/run.log || true

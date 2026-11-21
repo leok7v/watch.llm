@@ -1,0 +1,119 @@
+name: Watch
+options:
+  bundleIdPrefix: io.github.leok7v
+  xcodeVersion: "2700"
+  deploymentTarget:
+    watchOS: "11.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    CODE_SIGN_STYLE: Automatic
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+targets:
+  Watch:
+    type: application
+    platform: watchOS
+    sources:
+      - App.swift
+      - Assets.xcassets
+      - talk/utils.c
+      - talk/roles.c
+      - talk/blas.c
+      - talk/cpu.c
+      - talk/transformer.c
+      - talk/sampler.c
+      - talk/falcon.c
+      - talk/whistle.c
+      - talk/supertonic.c
+    dependencies:
+      - sdk: Accelerate.framework
+      - target: Dial
+    postBuildScripts:
+      - name: Bundle Models
+        basedOnDependencyAnalysis: false
+        script: |
+          [ "$BUNDLE_MODELS" = "NO" ] && exit 0
+          from="$HOME/huggingface.co/leok7v"
+          if [ -d "$SRCROOT/models/leok7v" ]; then
+              from="$SRCROOT/models/leok7v"
+          fi
+          to="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH"
+          falcon=Falcon-H1-Tiny-Tool-Calling-90M-GGUF
+          for file in whistle/whistle.cact \
+              $falcon/Falcon-H1-Tiny-90M-Tool-Calling-Q8_0.gguf \
+              supertonic/supertonic-q4.safetensors; do
+              cp -c "$from/$file" "$to/" || cp "$from/$file" "$to/" || exit 1
+          done
+    info:
+      path: Build/Watch.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKBackgroundModes: [self-care]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.leok7v.watch
+        INFOPLIST_KEY_CFBundleDisplayName: AGI
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_WKApplication: YES
+        INFOPLIST_KEY_WKWatchOnly: YES
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: AGI listens only after you tap the microphone, and what you say is heard on this watch.
+        SWIFT_OBJC_BRIDGING_HEADER: talk/talk.h
+        GCC_C_LANGUAGE_STANDARD: c2x
+        GCC_PREPROCESSOR_DEFINITIONS:
+          - NO_MAIN=1
+          - ACCELERATE_NEW_LAPACK=
+          - BACKEND_LIST=X(blas)X(cpu)
+          - ASR_LIST=X(whistle)
+          - LLM_LIST=X(falcon)
+          - TTS_LIST=X(supertonic)
+        WARNING_CFLAGS: -Wall -Wextra -Wpedantic
+      configs:
+        Debug:
+          GCC_OPTIMIZATION_LEVEL: "3"
+          SWIFT_OPTIMIZATION_LEVEL: "-O"
+        Release:
+          GCC_OPTIMIZATION_LEVEL: "3"
+  Dial:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - App.swift
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: Build/Dial.plist
+      properties:
+        CFBundleDisplayName: AGI
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.leok7v.watch.dial
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) WIDGET
+        SKIP_INSTALL: YES
+schemes:
+  Watch:
+    build:
+      targets:
+        Watch: all
+    run:
+      config: Debug
+      commandLineArguments:
+        "text=What is the capital of France?": false
+        "tool={\"name\":\"get_time\"}": false
+        "mock=1": false
+        "mute=1": false
+        "fresh=1": false
+        "exit=1": false

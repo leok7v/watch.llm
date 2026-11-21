@@ -1,0 +1,5 @@
+Build/
+Watch.xcodeproj/
+models/
+tmp/
+.DS_Store
